@@ -7,4 +7,8 @@
 
 29/1/2026
 
-1 : port data_io to tensorflow 
+1 : port data_io to tensorflow (In process)
+
+30/1/2026
+
+2 : port ulti and train to tensorflow (In process)
