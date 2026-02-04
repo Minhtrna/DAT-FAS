@@ -12,7 +12,7 @@ default config for training
 import torch
 from datetime import datetime
 from easydict import EasyDict
-from src.utility import make_if_not_exist, get_width_height, get_kernel
+from source.utility import make_if_not_exist, get_width_height, get_kernel
 
 
 def get_default_config():
