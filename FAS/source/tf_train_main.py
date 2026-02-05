@@ -2,9 +2,9 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.optimizers import SGD
 from tqdm import tqdm
-from src.utility import get_time
-from src.model_lib.MultiFTNet import MultiFTNet
-from src.data_io.dataset_loader import get_train_loader
+from source.utility import get_time
+from source.model.MultiFTNet import MultiFTNet
+from source.data_io.dataset_loader import get_train_loader
 
 class TrainMain:
     def __init__(self,conf):
