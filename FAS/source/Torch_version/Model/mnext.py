@@ -146,7 +146,7 @@ class SGBlock(nn.Module):
             return out
 
 class MXNet(nn.Module):
-    def __init__(self, num_classes=1000, width_mult=1.):
+    def __init__(self, num_classes=1000, width_mult=1., in_channels=3):
         super(MXNet, self).__init__()
         # setting of SGB blocks
         self.cfgs = [
@@ -192,7 +192,7 @@ class MXNet(nn.Module):
 
         # building first layer
         input_channel = _make_divisible(32 * width_mult, 4 if width_mult == 0.1 else 8)
-        layers = [conv_3x3_bn(3, input_channel, 1)] # stride 2->1 for CIFAR
+        layers = [conv_3x3_bn(in_channels, input_channel, 1)] # stride 2->1 for CIFAR
         # building inverted residual blocks
         block = SGBlock
         for t, c, n, s in self.cfgs:

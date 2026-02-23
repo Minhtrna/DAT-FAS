@@ -1,14 +1,7 @@
-# -*- coding: utf-8 -*-
-# @Time : 20-6-3 下午5:39
-# @Author : zhuying
-# @Company : Minivision
-# @File : train.py
-# @Software : PyCharm
-
 import argparse
 import os
-from src.train_main import TrainMain
-from src.default_config import get_default_config, update_config
+from source.tf_train_main import TrainMain
+from source.tf_default_config import get_default_config, update_config
 
 
 def parse_args():
