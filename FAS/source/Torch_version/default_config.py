@@ -5,69 +5,120 @@
 # @File : default_config.py
 # @Software : PyCharm
 # --*-- coding: utf-8 --*--
-"""
-default config for training
-"""
+#"""
+#default config for training
+#"""
 
+#import torch
+#from datetime import datetime
+#from easydict import EasyDict
+#from utility import make_if_not_exist, get_width_height, get_kernel
+
+
+#def get_default_config():
+#    conf = EasyDict()
+#
+#    # ----------------------training---------------
+#    conf.lr = 1e-1
+#    # [9, 13, 15]
+#    conf.milestones = [10, 15, 22]  # down learing rate
+#    conf.gamma = 0.1
+#    conf.epochs = 25
+#    conf.momentum = 0.9
+#    conf.batch_size = 1024
+#
+#    # model
+#    conf.num_classes = 3
+#    conf.input_channel = 3
+#    conf.embedding_size = 128
+#
+#    # dataset
+#    conf.train_root_path = './datasets/rgb_image'
+#
+#    # save file path
+#    conf.snapshot_dir_path = './saved_logs/snapshot'
+#
+#    # log path
+#    conf.log_path = './saved_logs/jobs'
+#    # tensorboard
+#    conf.board_loss_every = 10
+#    # save model/iter
+#    conf.save_every = 30
+#
+#    return conf
+
+
+#def update_config(args, conf):
+#    conf.devices = args.devices
+#    conf.patch_info = args.patch_info
+#    w_input, h_input = get_width_height(args.patch_info)
+#    conf.input_size = [h_input, w_input]
+#    conf.kernel_size = get_kernel(h_input, w_input)
+#    conf.device = "cuda:{}".format(conf.devices[0]) if torch.cuda.is_available() else "cpu"
+#
+#    # resize fourier image size
+#    conf.ft_height = 2*conf.kernel_size[0]
+#    conf.ft_width = 2*conf.kernel_size[1]
+#    current_time = datetime.now().strftime('%b%d_%H-%M-%S')
+#    job_name = 'Anti_Spoofing_{}'.format(args.patch_info)
+#    log_path = '{}/{}/{} '.format(conf.log_path, job_name, current_time)
+#    snapshot_dir = '{}/{}'.format(conf.snapshot_dir_path, job_name)
+#
+#    make_if_not_exist(snapshot_dir)
+#    make_if_not_exist(log_path)
+#
+#    conf.model_path = snapshot_dir
+#    conf.log_path = log_path
+#    conf.job_name = job_name
+#    return conf
+
+
+"""Training configuration for CASIA-FASD."""
+
+import os
 import torch
-from datetime import datetime
-from easydict import EasyDict
-from source.utility import make_if_not_exist, get_width_height, get_kernel
 
 
 def get_default_config():
-    conf = EasyDict()
+    conf = {}
 
-    # ----------------------training---------------
-    conf.lr = 1e-1
-    # [9, 13, 15]
-    conf.milestones = [10, 15, 22]  # down learing rate
-    conf.gamma = 0.1
-    conf.epochs = 25
-    conf.momentum = 0.9
-    conf.batch_size = 1024
+    # Training
+    conf["lr"] = 0.01
+    conf["milestones"] = [10, 15, 22]
+    conf["gamma"] = 0.1
+    conf["epochs"] = 25
+    conf["momentum"] = 0.9
+    conf["weight_decay"] = 5e-4
+    conf["batch_size"] = 128
 
-    # model
-    conf.num_classes = 3
-    conf.input_channel = 3
-    conf.embedding_size = 128
+    # Model
+    conf["num_classes"] = 2
+    conf["img_channel"] = 3
+    conf["embedding_size"] = 128
+    conf["img_size"] = (80, 80)
+    conf["ft_size"] = (10, 10)
+    conf["use_ft"] = True
 
-    # dataset
-    conf.train_root_path = './datasets/rgb_image'
+    # Loss weights
+    conf["cls_weight"] = 1.0
+    conf["ft_weight"] = 0.5
 
-    # save file path
-    conf.snapshot_dir_path = './saved_logs/snapshot'
+    # Dataset
+    conf["train_root"] = "/home/tranquangminh/DAT/Datasets/Casia-fasd/train_img"
+    conf["test_root"] = "/home/tranquangminh/DAT/Datasets/Casia-fasd/test_img"
+    conf["num_workers"] = 4
 
-    # log path
-    conf.log_path = './saved_logs/jobs'
-    # tensorboard
-    conf.board_loss_every = 10
-    # save model/iter
-    conf.save_every = 30
+    # Save
+    conf["save_dir"] = "./saved_models"
+    conf["log_interval"] = 50
+    conf["save_interval"] = 5
+
+    # Device
+    conf["device"] = "cuda:0" if torch.cuda.is_available() else "cpu"
+    conf["gpu_ids"] = [0]
 
     return conf
 
 
-def update_config(args, conf):
-    conf.devices = args.devices
-    conf.patch_info = args.patch_info
-    w_input, h_input = get_width_height(args.patch_info)
-    conf.input_size = [h_input, w_input]
-    conf.kernel_size = get_kernel(h_input, w_input)
-    conf.device = "cuda:{}".format(conf.devices[0]) if torch.cuda.is_available() else "cpu"
-
-    # resize fourier image size
-    conf.ft_height = 2*conf.kernel_size[0]
-    conf.ft_width = 2*conf.kernel_size[1]
-    current_time = datetime.now().strftime('%b%d_%H-%M-%S')
-    job_name = 'Anti_Spoofing_{}'.format(args.patch_info)
-    log_path = '{}/{}/{} '.format(conf.log_path, job_name, current_time)
-    snapshot_dir = '{}/{}'.format(conf.snapshot_dir_path, job_name)
-
-    make_if_not_exist(snapshot_dir)
-    make_if_not_exist(log_path)
-
-    conf.model_path = snapshot_dir
-    conf.log_path = log_path
-    conf.job_name = job_name
-    return conf
+def make_dirs(conf):
+    os.makedirs(conf["save_dir"], exist_ok=True)
