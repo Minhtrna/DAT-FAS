@@ -1,14 +1,3 @@
 Code for FAS-DAT
 
-Task 
-
-1 Port model and FT transform to tensorflow  (Done)
-2 Replace SE module with SimAM module  (In process)
-3 Replace Mobilenetv2 base with mobilenext base, check mnext.py for pytorch implements of mobilenext. (Done)
-4 Implement optical flow model (Optional) 
-5 Use SimAM attention map to fuse optical flow feature and FT feature before push to model (In development)
-
-
-29/1/2026
-
-1 : port data_io to tensorflow dir : FAS/source/data_io
+<img width="2649" height="1132" alt="Net_design conv 1" src="https://github.com/user-attachments/assets/f566e647-415e-4bd5-9a1c-768440f11248" />
