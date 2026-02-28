@@ -10,15 +10,51 @@ Usage:
 import argparse
 import os
 import time
+import random
+import numpy as np
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch import optim
 from tqdm import tqdm
 
 from default_config import get_default_config, make_dirs
 from data_io.dataset_loader import get_train_loader, get_test_loader
 from Model.MultiFTNet import MultiFTNet
+
+
+class SpectralLoss(nn.Module):
+    """Frequency-domain loss comparing magnitude and phase of FFT."""
+    def __init__(self, magnitude_weight=1.0, phase_weight=0.5):
+        super().__init__()
+        self.mag_w = magnitude_weight
+        self.phase_w = phase_weight
+
+    def forward(self, pred, target):
+        pred_fft = torch.fft.fft2(pred, norm='ortho')
+        target_fft = torch.fft.fft2(target, norm='ortho')
+        pred_mag = torch.abs(pred_fft)
+        target_mag = torch.abs(target_fft)
+        pred_phase = torch.angle(pred_fft)
+        target_phase = torch.angle(target_fft)
+        return self.mag_w * F.mse_loss(pred_mag, target_mag) + self.phase_w * F.mse_loss(pred_phase, target_phase)
+
+
+class FocalFrequencyLoss(nn.Module):
+    """Focal Frequency Loss — adaptively weights hard-to-predict frequencies."""
+    def __init__(self, alpha=1.0):
+        super().__init__()
+        self.alpha = alpha
+
+    def forward(self, pred, target):
+        pred_fft = torch.fft.fft2(pred, norm='ortho')
+        target_fft = torch.fft.fft2(target, norm='ortho')
+        freq_distance = torch.abs(pred_fft - target_fft)
+        weight = freq_distance.detach()
+        weight = weight / (weight.mean(dim=(-2, -1), keepdim=True) + 1e-8)
+        weight = weight ** self.alpha
+        return (weight * freq_distance).mean()
 
 
 def parse_args():
@@ -31,7 +67,18 @@ def parse_args():
     parser.add_argument("--gpu", type=str, default="0")
     parser.add_argument("--no_ft", action="store_true", help="Disable FT supervision")
     parser.add_argument("--resume", type=str, default=None, help="Path to checkpoint")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
     return parser.parse_args()
+
+
+def seed_everything(seed=42):
+    """Set all random seeds for reproducibility."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 
 def evaluate(model, test_loader, device):
@@ -67,6 +114,7 @@ def evaluate(model, test_loader, device):
 
 def train():
     args = parse_args()
+    seed_everything(args.seed)
     conf = get_default_config()
 
     # Override config with CLI args
@@ -124,14 +172,17 @@ def train():
     # Loss & Optimizer
     cls_criterion = nn.CrossEntropyLoss()
     ft_criterion = nn.MSELoss()
-    optimizer = optim.SGD(
+    spectral_criterion = SpectralLoss()
+    focal_freq_criterion = FocalFrequencyLoss(alpha=1.0)
+
+    # CDC-optimized: Adam + CosineAnnealing
+    optimizer = optim.Adam(
         model.parameters(),
         lr=conf["lr"],
-        momentum=conf["momentum"],
-        weight_decay=conf["weight_decay"],
+        weight_decay=5e-5,
     )
-    scheduler = optim.lr_scheduler.MultiStepLR(
-        optimizer, milestones=conf["milestones"], gamma=conf["gamma"]
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(
+        optimizer, T_max=conf["epochs"], eta_min=1e-6
     )
 
     # Resume
@@ -174,8 +225,15 @@ def train():
             if conf["use_ft"]:
                 cls_out, ft_out = model(images)
                 loss_cls = cls_criterion(cls_out, labels)
-                loss_ft = ft_criterion(ft_out, ft_targets)
-                loss = conf["cls_weight"] * loss_cls + conf["ft_weight"] * loss_ft
+                loss_mse = ft_criterion(ft_out, ft_targets)
+                loss_spectral = spectral_criterion(ft_out, ft_targets)
+                loss_focal = focal_freq_criterion(ft_out, ft_targets)
+                # Scaled FT losses: total FT weight = 0.5 (0.3 + 0.1 + 0.1)
+                loss_ft = loss_mse
+                loss = (conf["cls_weight"] * loss_cls
+                        + 0.3 * loss_mse
+                        + 0.1 * loss_spectral
+                        + 0.1 * loss_focal)
             else:
                 cls_out = model(images)
                 loss_cls = cls_criterion(cls_out, labels)

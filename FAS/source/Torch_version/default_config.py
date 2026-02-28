@@ -82,13 +82,10 @@ import torch
 def get_default_config():
     conf = {}
 
-    # Training
-    conf["lr"] = 0.01
-    conf["milestones"] = [10, 15, 22]
-    conf["gamma"] = 0.1
+    # Training (CDC-optimized: Adam + CosineAnnealing)
+    conf["lr"] = 1e-3
+    conf["weight_decay"] = 5e-5
     conf["epochs"] = 25
-    conf["momentum"] = 0.9
-    conf["weight_decay"] = 5e-4
     conf["batch_size"] = 128
 
     # Model
@@ -99,9 +96,9 @@ def get_default_config():
     conf["ft_size"] = (10, 10)
     conf["use_ft"] = True
 
-    # Loss weights
+    # Loss weights (cls=1.0, FT split: 0.3 MSE + 0.1 Spectral + 0.1 Focal = 0.5 total)
     conf["cls_weight"] = 1.0
-    conf["ft_weight"] = 0.5
+    conf["ft_weight"] = 0.5  # kept for reference
 
     # Dataset
     conf["train_root"] = "/home/tranquangminh/DAT/Datasets/Casia-fasd/train_img"
